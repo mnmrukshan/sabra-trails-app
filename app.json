@@ -8,7 +8,7 @@
     "scheme": "sabratrailsapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/icon.png"
     },
     "android": {
       "adaptiveIcon": {
@@ -36,9 +36,10 @@
         }
       ]
     ],
+    "sdkVersion": "54.0.0",
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     }
   }
 }
+
