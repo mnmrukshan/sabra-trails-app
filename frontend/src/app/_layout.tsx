@@ -10,6 +10,8 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="trail/[id]" />
+        <Stack.Screen name="weather/[id]" />
+        <Stack.Screen name="map/[id]" />
         <Stack.Screen name="category/[type]" />
       </Stack>
 
