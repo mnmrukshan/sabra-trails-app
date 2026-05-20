@@ -192,7 +192,11 @@ export default function HomeScreen() {
             style={styles.searchInput}
           />
           {searchQuery.trim() !== '' && (
-            <Pressable onPress={() => setSearchQuery('')} style={styles.clearButton}>
+            <Pressable 
+              onPress={() => setSearchQuery('')} 
+              style={styles.clearButton}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+            >
               <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
             </Pressable>
           )}
