@@ -13,6 +13,8 @@ export default function RootLayout() {
         <Stack.Screen name="weather/[id]" />
         <Stack.Screen name="map/[id]" />
         <Stack.Screen name="category/[type]" />
+        <Stack.Screen name="active-adventure" options={{ presentation: 'modal', gestureEnabled: false }} />
+        <Stack.Screen name="adventure-summary" options={{ presentation: 'modal', gestureEnabled: false }} />
       </Stack>
 
     </ThemeProvider>

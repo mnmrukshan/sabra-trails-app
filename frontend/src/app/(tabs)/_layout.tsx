@@ -1,10 +1,9 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function TabLayout() {
@@ -17,6 +16,17 @@ export default function TabLayout() {
         tabBarActiveTintColor: theme.primary,
         tabBarInactiveTintColor: theme.textSecondary,
         tabBarStyle: styles.tabBar,
+        tabBarItemStyle: {
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: 70,
+          paddingTop: 10,
+        },
+        tabBarIconStyle: {
+          justifyContent: 'center',
+          alignItems: 'center',
+          margin: 0,
+        },
         tabBarBackground: () => (
           <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
         ),
@@ -25,34 +35,32 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={[styles.centerIcon, focused && styles.centerIconActive]}>
-              <Ionicons name="compass" size={28} color={focused ? '#fff' : color} />
-            </View>
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="compass" size={size + 4} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="gallery"
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'images' : 'images-outline'} size={24} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'images' : 'images-outline'} size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="safety"
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'sparkles' : 'sparkles-outline'} size={24} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'sparkles' : 'sparkles-outline'} size={size} color={color} />
           ),
         }}
       />
@@ -80,17 +88,5 @@ const styles = StyleSheet.create({
         shadowRadius: 20,
       },
     }),
-  },
-  centerIcon: {
-    width: 55,
-    height: 55,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  centerIconActive: {
-    backgroundColor: '#FF8C32', // Peach Gold
-    transform: [{ scale: 1.1 }],
   },
 });
