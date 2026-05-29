@@ -24,26 +24,28 @@ export default function TrailDetailScreen() {
   const trail = TRAILS.find((t) => t.id === id);
 
   const trailCoordinates: Record<string, { lat: number; lon: number }> = {
-    hirikatuoya: { lat: 6.7146, lon: 80.7872 },
-    'bakers-bend': { lat: 6.7214, lon: 80.7865 },
-    hawagala: { lat: 6.7410, lon: 80.7930 },
+    hirikatuoya: { lat: 6.7158, lon: 80.7892 },
+    'bakers-bend': { lat: 6.7806, lon: 80.8153 },
+    hawagala: { lat: 6.7667, lon: 80.8167 },
     narangala: { lat: 6.9856, lon: 81.0183 },
-    wangedigala: { lat: 6.7328, lon: 80.8122 },
-    pahanthudawa: { lat: 6.7166, lon: 80.7925 },
+    wangedigala: { lat: 6.7821, lon: 80.8130 },
+    pahanthudawa: { lat: 6.7175, lon: 80.7936 },
     hunugalpokuna: { lat: 6.6433, lon: 80.7022 },
-    gartmore: { lat: 6.8122, lon: 80.6078 },
-    'alien-rock': { lat: 7.7125, lon: 81.2144 },
+    gartmore: { lat: 6.8202, lon: 80.6052 },
+    'adams-peak': { lat: 6.8092, lon: 80.4996 },
+    'alien-rock': { lat: 6.7812, lon: 80.8248 },
+    'alien-waterfall': { lat: 6.7845, lon: 80.8285 },
     'aadara-kanda': { lat: 6.7350, lon: 80.7990 },
-    nonpareil: { lat: 6.7214, lon: 80.7865 },
-    'lanka-ella': { lat: 6.7794, lon: 80.8250 },
+    nonpareil: { lat: 6.7806, lon: 80.8153 },
+    'lanka-ella': { lat: 6.7819, lon: 80.8139 },
     kalthota: { lat: 6.5411, lon: 80.8672 },
     'devils-staircase': { lat: 6.7903, lon: 80.8356 },
-    thangamale: { lat: 6.7825, lon: 80.9575 },
+    thangamale: { lat: 6.7770, lon: 80.9380 },
     bambarakanda: { lat: 6.7725, lon: 80.8322 },
     'liptons-seat': { lat: 6.7844, lon: 81.0164 },
     'nine-arch': { lat: 6.8767, lon: 81.0608 },
     diyaluma: { lat: 6.7267, lon: 81.0306 },
-    adisham: { lat: 6.7778, lon: 80.9389 },
+    adisham: { lat: 6.7725, lon: 80.9348 },
     'ella-rock': { lat: 6.8583, lon: 81.0458 },
     'horton-plains': { lat: 6.8028, lon: 80.8028 },
     'ohiya-scenic': { lat: 6.8167, lon: 80.8500 },
@@ -52,6 +54,20 @@ export default function TrailDetailScreen() {
     surathali: { lat: 6.7456, lon: 80.8519 },
     'samanala-wewa': { lat: 6.6908, lon: 80.7972 },
     'bopath-falls': { lat: 6.7628, lon: 80.3744 },
+    'lake-gregory': { lat: 6.9634, lon: 80.7818 },
+    'bakers-falls': { lat: 6.7972, lon: 80.7906 },
+    'st-clairs-falls': { lat: 6.9372, lon: 80.6456 },
+    'bomburu-ella': { lat: 6.9248, lon: 80.8653 },
+    'lovers-leap': { lat: 6.9692, lon: 80.7936 },
+    'dunhinda-falls': { lat: 7.0217, lon: 81.0628 },
+    idalgashinna: { lat: 6.7844, lon: 80.8931 },
+    pattipola: { lat: 6.8539, lon: 80.8358 },
+    diyatalawa: { lat: 6.8189, lon: 80.9575 },
+    'gerandigini-ella': { lat: 6.7881, lon: 80.8256 },
+    'aberdeen-falls': { lat: 6.9458, lon: 80.5019 },
+    'laxapana-falls': { lat: 6.9011, lon: 80.5303 },
+    madulsima: { lat: 7.0867, lon: 81.1517 },
+    'chariot-path': { lat: 7.0675, lon: 80.7028 },
   };
 
   const [climate, setClimate] = React.useState(trail ? trail.climate : '');
@@ -60,7 +76,7 @@ export default function TrailDetailScreen() {
     if (!trail) return;
     async function fetchTrailWeather() {
       try {
-        const coords = trailCoordinates[trail!.id] || { lat: 6.7146, lon: 80.7872 };
+        const coords = (trail as any).coordinates || trailCoordinates[trail!.id] || { lat: 6.7146, lon: 80.7872 };
         const response = await fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,weather_code`
         );
@@ -212,7 +228,10 @@ export default function TrailDetailScreen() {
           colors={['rgba(28, 28, 30, 0)', 'rgba(28, 28, 30, 0.95)', '#1C1C1E']}
           style={StyleSheet.absoluteFillObject}
         />
-        <Pressable style={styles.bottomActionButton}>
+        <Pressable 
+          style={styles.bottomActionButton}
+          onPress={() => router.push({ pathname: '/active-adventure', params: { id: trail.id } })}
+        >
           <LinearGradient
             colors={['#FF8C32', '#FF5F00']}
             start={{ x: 0, y: 0 }}
