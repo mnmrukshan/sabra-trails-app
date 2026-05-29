@@ -1,107 +1,223 @@
-import { Image } from 'expo-image';
 import React from 'react';
-import { 
-  ScrollView, 
-  StyleSheet, 
-  View, 
-  Text, 
-  TextInput, 
-  Pressable,
-  Dimensions 
-} from 'react-native';
+import { StyleSheet, View, Text, Dimensions, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
+import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { GlassCard } from '@/components/GlassCard';
-import { ThemedText } from '@/components/themed-text';
+import { BlurView } from 'expo-blur';
+import { TRAILS } from '@/utils/trailData';
 import { useTheme } from '@/hooks/use-theme';
 
 const { width } = Dimensions.get('window');
 
-export default function AIAnalysisScreen() {
+const trailCoordinates: Record<string, { lat: number; lon: number }> = {
+  hirikatuoya: { lat: 6.7158, lon: 80.7892 },
+  'bakers-bend': { lat: 6.7806, lon: 80.8153 },
+  hawagala: { lat: 6.7667, lon: 80.8167 },
+  narangala: { lat: 6.9856, lon: 81.0183 },
+  wangedigala: { lat: 6.7821, lon: 80.8130 },
+  pahanthudawa: { lat: 6.7175, lon: 80.7936 },
+  hunugalpokuna: { lat: 6.6433, lon: 80.7022 },
+  gartmore: { lat: 6.8202, lon: 80.6052 },
+  'adams-peak': { lat: 6.8092, lon: 80.4996 },
+  'alien-rock': { lat: 6.7812, lon: 80.8248 },
+  'alien-waterfall': { lat: 6.7845, lon: 80.8285 },
+  'aadara-kanda': { lat: 6.7350, lon: 80.7990 },
+  nonpareil: { lat: 6.7806, lon: 80.8153 },
+  'lanka-ella': { lat: 6.7819, lon: 80.8139 },
+  kalthota: { lat: 6.5411, lon: 80.8672 },
+  'devils-staircase': { lat: 6.7903, lon: 80.8356 },
+  thangamale: { lat: 6.7770, lon: 80.9380 },
+  bambarakanda: { lat: 6.7725, lon: 80.8322 },
+  'liptons-seat': { lat: 6.7844, lon: 81.0164 },
+  'nine-arch': { lat: 6.8767, lon: 81.0608 },
+  diyaluma: { lat: 6.7267, lon: 81.0306 },
+  adisham: { lat: 6.7725, lon: 80.9348 },
+  'ella-rock': { lat: 6.8583, lon: 81.0458 },
+  'horton-plains': { lat: 6.8028, lon: 80.8028 },
+  'ohiya-scenic': { lat: 6.8167, lon: 80.8500 },
+  'worlds-end': { lat: 6.7833, lon: 80.7833 },
+  'moon-plains': { lat: 6.9583, lon: 80.8083 },
+  surathali: { lat: 6.7456, lon: 80.8519 },
+  'samanala-wewa': { lat: 6.6908, lon: 80.7972 },
+  'bopath-falls': { lat: 6.7628, lon: 80.3744 },
+  'lake-gregory': { lat: 6.9634, lon: 80.7818 },
+  'bakers-falls': { lat: 6.7972, lon: 80.7906 },
+  'st-clairs-falls': { lat: 6.9372, lon: 80.6456 },
+  'bomburu-ella': { lat: 6.9248, lon: 80.8653 },
+  'lovers-leap': { lat: 6.9692, lon: 80.7936 },
+  'dunhinda-falls': { lat: 7.0217, lon: 81.0628 },
+  idalgashinna: { lat: 6.7844, lon: 80.8931 },
+  pattipola: { lat: 6.8539, lon: 80.8358 },
+  diyatalawa: { lat: 6.8189, lon: 80.9575 },
+  'gerandigini-ella': { lat: 6.7881, lon: 80.8256 },
+  'aberdeen-falls': { lat: 6.9458, lon: 80.5019 },
+  'laxapana-falls': { lat: 6.9011, lon: 80.5303 },
+  madulsima: { lat: 7.0867, lon: 81.1517 },
+  'chariot-path': { lat: 7.0675, lon: 80.7028 },
+};
+
+const INITIAL_REGION = {
+  latitude: 6.7900,
+  longitude: 80.8200,
+  latitudeDelta: 0.75,
+  longitudeDelta: 0.75,
+};
+
+const darkMapStyle = [
+  {
+    elementType: 'geometry',
+    stylers: [{ color: '#1c1c1e' }],
+  },
+  {
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#8e8e93' }],
+  },
+  {
+    elementType: 'labels.text.stroke',
+    stylers: [{ color: '#1c1c1e' }],
+  },
+  {
+    featureType: 'administrative',
+    elementType: 'geometry',
+    stylers: [{ color: '#38383a' }],
+  },
+  {
+    featureType: 'administrative.country',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#aeaeb2' }],
+  },
+  {
+    featureType: 'administrative.land_parcel',
+    stylers: [{ visibility: 'off' }],
+  },
+  {
+    featureType: 'administrative.locality',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#d1d1d6' }],
+  },
+  {
+    featureType: 'poi',
+    stylers: [{ visibility: 'off' }],
+  },
+  {
+    featureType: 'road',
+    elementType: 'geometry.fill',
+    stylers: [{ color: '#2c2c2e' }],
+  },
+  {
+    featureType: 'road',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#8e8e93' }],
+  },
+  {
+    featureType: 'road.arterial',
+    elementType: 'geometry',
+    stylers: [{ color: '#3a3a3c' }],
+  },
+  {
+    featureType: 'road.highway',
+    elementType: 'geometry',
+    stylers: [{ color: '#48484a' }],
+  },
+  {
+    featureType: 'transit',
+    stylers: [{ visibility: 'off' }],
+  },
+  {
+    featureType: 'water',
+    elementType: 'geometry',
+    stylers: [{ color: '#1d2a44' }],
+  },
+  {
+    featureType: 'water',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#48484a' }],
+  },
+];
+
+export default function ExploreScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const theme = useTheme();
 
+  const getDifficultyColor = (diff: string = '') => {
+    const val = diff.toLowerCase();
+    if (val.includes('easy')) return '#4ADE80';
+    if (val.includes('moderate') || val.includes('medium')) return '#FBBF24';
+    if (val.includes('hard')) return '#F87171';
+    return '#4ADE80';
+  };
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <ScrollView 
-        contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: 150 }}
-        showsVerticalScrollIndicator={false}
+    <View style={styles.container}>
+      {/* Full-Screen Map */}
+      <MapView
+        style={StyleSheet.absoluteFillObject}
+        initialRegion={INITIAL_REGION}
+        provider={PROVIDER_GOOGLE}
+        mapType="standard"
+        customMapStyle={darkMapStyle}
       >
-        {/* Header Widget */}
-        <View style={styles.weatherHeader}>
-           <Image 
-             source="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1000" 
-             style={styles.weatherBg} 
-             blurRadius={5}
-           />
+        {TRAILS.map((trail) => {
+          const coords = (trail as any).coordinates || trailCoordinates[trail.id];
+          if (!coords) return null;
 
+          return (
+            <Marker
+              key={trail.id}
+              coordinate={{
+                latitude: coords.lat,
+                longitude: coords.lon,
+              }}
+              title={trail.name}
+              description={trail.location}
+            >
+              {/* Glowing Compass Marker Pin */}
+              <View style={styles.customMarkerContainer}>
+                <View style={styles.markerPulse} />
+                <View style={[styles.markerPin, { backgroundColor: theme.accent }]}>
+                  <Ionicons name="compass" size={14} color="#fff" />
+                </View>
+              </View>
 
-           <View style={styles.weatherOverlay}>
-              <View style={styles.locationTag}>
-                <Ionicons name="location" size={16} color="#fff" />
-                <Text style={styles.locationTagText}>BAMBARAKANDA, LK</Text>
-              </View>
-              <Text style={styles.tempText}>22°<Text style={styles.tempUnit}>C</Text></Text>
-              <View style={styles.conditionRow}>
-                <Ionicons name="rainy" size={20} color={theme.primary} />
-                <Text style={styles.conditionText}>Mist & Light Showers</Text>
-              </View>
-           </View>
+              {/* Interactive Glassmorphic Callout */}
+              <Callout 
+                tooltip 
+                onPress={() => router.push(`/trail/${trail.id}`)}
+              >
+                <View style={styles.calloutWrapper}>
+                  <View style={styles.calloutContainer}>
+                    <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+                    <View style={styles.calloutContent}>
+                      <Text style={styles.calloutTitle} numberOfLines={1}>{trail.name}</Text>
+                      <Text style={styles.calloutLocation} numberOfLines={1}>📍 {trail.location}</Text>
+                      <View style={styles.calloutBadgeRow}>
+                        <View style={styles.calloutBadge}>
+                          <Ionicons name="speedometer" size={10} color={getDifficultyColor(trail.difficulty)} />
+                          <Text style={[styles.calloutBadgeText, { color: getDifficultyColor(trail.difficulty) }]}>
+                            {trail.difficulty}
+                          </Text>
+                        </View>
+                        <Text style={styles.calloutLinkText}>Tap for Details →</Text>
+                      </View>
+                    </View>
+                  </View>
+                  <View style={styles.calloutArrow} />
+                </View>
+              </Callout>
+            </Marker>
+          );
+        })}
+      </MapView>
+
+      {/* Floating Header Label */}
+      <View style={[styles.floatingHeader, { top: insets.top + 10 }]}>
+        <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+        <View style={styles.headerContent}>
+          <Ionicons name="map" size={18} color={theme.accent} />
+          <Text style={styles.headerText}>Explore Trail Network</Text>
         </View>
-
-        {/* User Question */}
-        <View style={styles.userBubbleContainer}>
-          <GlassCard intensity={15} style={styles.userBubble}>
-            <Text style={styles.userQuestion}>Is it safe to hike Bambarakanda at 2 PM today?</Text>
-          </GlassCard>
-        </View>
-
-        {/* AI Analysis Card */}
-        <View style={styles.analysisContainer}>
-          <GlassCard intensity={25} style={styles.analysisCard}>
-            <View style={styles.analysisHeader}>
-               <Ionicons name="sparkles" size={20} color={theme.primary} />
-               <Text style={styles.analysisTitle}>TRAIL AI ANALYSIS</Text>
-            </View>
-            
-            <Text style={styles.analysisBody}>
-              Current conditions show dense mist moving in around 1:30 PM, reducing visibility significantly near the upper falls. While the trail remains open, surface rocks are likely to be extremely slippery due to morning precipitation.
-            </Text>
-
-            <View style={styles.badgeRow}>
-              <View style={[styles.statusBadge, { borderColor: '#EAB308' }]}>
-                <Ionicons name="eye-off-outline" size={14} color="#EAB308" />
-                <Text style={[styles.statusBadgeText, { color: '#EAB308' }]}>Low Visibility</Text>
-              </View>
-              <View style={[styles.statusBadge, { borderColor: '#4ADE80' }]}>
-                <Ionicons name="walk-outline" size={14} color="#4ADE80" />
-                <Text style={[styles.statusBadgeText, { color: '#4ADE80' }]}>Proceed with Caution</Text>
-              </View>
-            </View>
-
-            <View style={styles.recommendationBox}>
-              <Text style={styles.recommendationText}>
-                Recommendation: If you proceed, ensure you have robust anti-slip footwear and a high-lumen headlamp just in case.
-              </Text>
-            </View>
-          </GlassCard>
-        </View>
-      </ScrollView>
-
-      {/* Input Bar */}
-      <View style={[styles.inputWrapper, { bottom: 110 }]}>
-         <GlassCard intensity={30} style={styles.inputContainer}>
-            <Ionicons name="mic" size={20} color={theme.textSecondary} />
-            <TextInput 
-              placeholder="Ask about conditions, gear, or sa..." 
-              placeholderTextColor={theme.textSecondary}
-              style={styles.textInput}
-            />
-            <Pressable style={styles.sendButton}>
-              <Ionicons name="arrow-up" size={20} color="#fff" />
-            </Pressable>
-         </GlassCard>
       </View>
     </View>
   );
@@ -111,164 +227,121 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  weatherHeader: {
-    height: 250,
-    marginHorizontal: 40,
-    borderRadius: 30,
-    overflow: 'hidden',
-    position: 'relative',
-    elevation: 10,
-  },
-  weatherBg: {
-    width: '100%',
-    height: '100%',
-    opacity: 0.6,
-  },
-  weatherOverlay: {
-    ...StyleSheet.absoluteFillObject,
+  customMarkerContainer: {
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.3)',
   },
-  locationTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    marginBottom: 10,
-    gap: 6,
-  },
-  locationTagText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  tempText: {
-    fontSize: 80,
-    color: '#fff',
-    fontWeight: '800',
-  },
-  tempUnit: {
-    fontSize: 30,
-    fontWeight: '400',
-    color: '#FF8C32',
-  },
-  conditionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: -10,
-  },
-  conditionText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '500',
-  },
-  userBubbleContainer: {
-    paddingHorizontal: 20,
-    marginTop: 30,
-    alignItems: 'flex-end',
-  },
-  userBubble: {
-    maxWidth: '80%',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 20,
-    borderBottomRightRadius: 5,
-  },
-  userQuestion: {
-    color: '#fff',
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  analysisContainer: {
-    paddingHorizontal: 20,
-    marginTop: 20,
-  },
-  analysisCard: {
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 25,
-  },
-  analysisHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 15,
-  },
-  analysisTitle: {
-    color: '#FF8C32',
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-  },
-  analysisBody: {
-    color: '#fff',
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 20,
-    opacity: 0.9,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  statusBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  recommendationBox: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.05)',
-    paddingTop: 15,
-  },
-  recommendationText: {
-    color: '#A0A0A0',
-    fontSize: 14,
-    lineHeight: 20,
-    fontStyle: 'italic',
-  },
-  inputWrapper: {
+  markerPulse: {
     position: 'absolute',
-    left: 20,
-    right: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 140, 50, 0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 140, 50, 0.35)',
   },
-  inputContainer: {
+  markerPin: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  calloutWrapper: {
+    alignItems: 'center',
+    width: 220,
+  },
+  calloutContainer: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(18, 18, 18, 0.75)',
+  },
+  calloutContent: {
+    padding: 12,
+    alignItems: 'flex-start',
+    gap: 4,
+  },
+  calloutTitle: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  calloutLocation: {
+    color: '#aaa',
+    fontSize: 11,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  calloutBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 0,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(30,30,30,0.8)',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 2,
   },
-  textInput: {
-    flex: 1,
-    marginLeft: 10,
-    color: '#fff',
-    fontSize: 15,
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FF8C32',
-    justifyContent: 'center',
+  calloutBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  calloutBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  calloutLinkText: {
+    color: '#FF8C32',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  calloutArrow: {
+    width: 10,
+    height: 10,
+    backgroundColor: 'rgba(18, 18, 18, 0.8)',
+    borderBottomWidth: 1,
+    borderRightWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    transform: [{ rotate: '45deg' }],
+    marginTop: -5,
+    zIndex: 99,
+  },
+  floatingHeader: {
+    position: 'absolute',
+    alignSelf: 'center',
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(18, 18, 18, 0.4)',
+    zIndex: 99,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  headerText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });
-

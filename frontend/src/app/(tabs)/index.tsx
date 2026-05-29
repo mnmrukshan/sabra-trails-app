@@ -249,7 +249,9 @@ export default function HomeScreen() {
               >
                 <Image source={item.image} style={styles.gemImage} />
                 <View style={styles.difficultyBadge}>
-                  <Text style={styles.difficultyText}>{item.difficulty}</Text>
+                  <Text style={[styles.difficultyText, { color: getDifficultyColor(item.difficulty) }]}>
+                    {item.difficulty}
+                  </Text>
                 </View>
                 <View style={styles.gemInfo}>
                   <ThemedText style={styles.gemName} numberOfLines={1}>{item.name}</ThemedText>
@@ -283,7 +285,9 @@ export default function HomeScreen() {
               >
                 <Image source={item.image} style={styles.popularImage} />
                 <View style={styles.difficultyBadge}>
-                  <Text style={styles.difficultyText}>{item.difficulty}</Text>
+                  <Text style={[styles.difficultyText, { color: getDifficultyColor(item.difficulty) }]}>
+                    {item.difficulty}
+                  </Text>
                 </View>
                 <View style={styles.gemInfo}>
                   <ThemedText style={styles.gemName} numberOfLines={1}>{item.name}</ThemedText>
