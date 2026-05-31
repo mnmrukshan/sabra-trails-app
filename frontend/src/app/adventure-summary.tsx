@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { TRAILS } from '@/utils/trailData';
 import { useTheme } from '@/hooks/use-theme';
+import { resolveTrailImage } from '@/services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -68,7 +69,7 @@ export default function AdventureSummaryScreen() {
       {/* Background Image Blurred */}
       {trail && (
         <View style={StyleSheet.absoluteFillObject}>
-          <Image source={trail.image} style={styles.backgroundImage} contentFit="cover" />
+          <Image source={resolveTrailImage(trail.image)} style={styles.backgroundImage} contentFit="cover" />
           <BlurView intensity={70} tint="dark" style={StyleSheet.absoluteFill} />
         </View>
       )}

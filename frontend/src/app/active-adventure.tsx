@@ -9,6 +9,7 @@ import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { TRAILS } from '@/utils/trailData';
 import { useTheme } from '@/hooks/use-theme';
+import { startAdventure, endAdventure, resolveTrailImage } from '@/services/api';
 
 const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -58,6 +59,10 @@ export default function ActiveAdventureScreen() {
     if (isActive) {
       if (!startTimeRef.current) {
         startTimeRef.current = Date.now();
+        // Start backend session on mount
+        startAdventure(id as string)
+          .then(res => console.log('Backend adventure started/resumed:', res))
+          .catch(err => console.error('Failed to start backend adventure session:', err));
       }
       timerRef.current = setInterval(() => {
         if (startTimeRef.current) {
@@ -107,11 +112,20 @@ export default function ActiveAdventureScreen() {
     };
   }, [isActive]);
 
-  const handleStopAdventure = () => {
+  const handleStopAdventure = async () => {
     // Premium Haptic feedback confirmation
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     
     setIsActive(false);
+    
+    // End backend session
+    const finalDurationMinutes = Math.max(1, Math.round(seconds / 60));
+    try {
+      await endAdventure({ duration: finalDurationMinutes });
+      console.log('Backend adventure ended successfully.');
+    } catch (err) {
+      console.error('Failed to end backend adventure:', err);
+    }
     
     // Navigate to summary screen passing seconds and trail ID
     router.replace({
@@ -158,7 +172,7 @@ export default function ActiveAdventureScreen() {
         
         {/* Subtle trail image backdrop for theme context */}
         {trail && (
-          <Image source={trail.image} style={styles.backgroundImage} contentFit="cover" />
+          <Image source={resolveTrailImage(trail.image)} style={styles.backgroundImage} contentFit="cover" />
         )}
         <BlurView intensity={65} tint="dark" style={StyleSheet.absoluteFill} />
       </View>
