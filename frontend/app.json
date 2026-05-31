@@ -34,7 +34,8 @@
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "sdkVersion": "54.0.0",
     "experiments": {
@@ -42,4 +43,3 @@
     }
   }
 }
-
