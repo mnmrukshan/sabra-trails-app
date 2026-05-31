@@ -11,6 +11,11 @@ export const TRAILS = [
     climate: 'Humid & Tropical',
     hiddenGem: true,
     image: require('@/assets/images/hirikatuoya.jpeg'),
+    images: [
+      require('@/assets/images/hirikatuoya.jpeg'),
+      require('@/assets/images/hirikatuoya_2.jpeg'),
+      require('@/assets/images/hirikatuoya_3.jpeg'),
+    ],
     safetyTips: ['Check water levels before entering.', 'Respect the local environment.'],
   },
   {
