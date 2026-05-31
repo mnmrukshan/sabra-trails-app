@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { StyleSheet, View, ScrollView, Pressable, Dimensions, Text } from 'react-native';
+import { StyleSheet, View, ScrollView, Pressable, Dimensions, Text, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,6 +12,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { TRAILS } from '@/utils/trailData';
 import { useTheme } from '@/hooks/use-theme';
+import { fetchTrailById, toggleBookmark, syncUserProfile, resolveTrailImage } from '@/services/api';
 
 const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -21,7 +22,53 @@ export default function TrailDetailScreen() {
   const theme = useTheme();
   const router = useRouter();
 
-  const trail = TRAILS.find((t) => t.id === id);
+  const [trail, setTrail] = React.useState<any>(TRAILS.find((t) => t.id === id));
+  const [isBookmarked, setIsBookmarked] = React.useState(false);
+  const [activeImageIndex, setActiveImageIndex] = React.useState(0);
+  const [scrollY, setScrollY] = React.useState(0);
+  const [scrollEnabled, setScrollEnabled] = React.useState(true);
+
+  const handleTouchStart = (e: any) => {
+    const pageY = e.nativeEvent.pageY;
+    const contentSheetTop = (SCREEN_HEIGHT * 0.5 + 24) - scrollY;
+    if (pageY < contentSheetTop) {
+      setScrollEnabled(false);
+    } else {
+      setScrollEnabled(true);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setScrollEnabled(true);
+  };
+
+  const imageUrls = React.useMemo(() => {
+    if (!trail) return [];
+    const rawImages = (trail.images && Array.isArray(trail.images) && trail.images.length > 0) 
+      ? trail.images 
+      : [trail.image];
+      
+    return rawImages.map((img: any) => {
+      if (!img) return '';
+      if (typeof img === 'object') {
+        if (img.type && typeof img.type === 'string') return img.type;
+        if (img.url && typeof img.url === 'string') return img.url;
+        if (img.uri && typeof img.uri === 'string') return img.uri;
+        const strVal = img.toString();
+        if (strVal && strVal !== '[object Object]') return strVal;
+      }
+      return img;
+    }).filter(Boolean);
+  }, [trail]);
+
+  const handleScroll = (event: any) => {
+    const scrollOffset = event.nativeEvent.contentOffset.x;
+    const viewWidth = event.nativeEvent.layoutMeasurement.width || width;
+    if (viewWidth > 0) {
+      const index = Math.round(scrollOffset / viewWidth);
+      setActiveImageIndex(index);
+    }
+  };
 
   const trailCoordinates: Record<string, { lat: number; lon: number }> = {
     hirikatuoya: { lat: 6.7158, lon: 80.7892 },
@@ -73,6 +120,31 @@ export default function TrailDetailScreen() {
   const [climate, setClimate] = React.useState(trail ? trail.climate : '');
 
   React.useEffect(() => {
+    async function loadTrailDetails() {
+      try {
+        const dbTrail = await fetchTrailById(id as string);
+        if (dbTrail) {
+          setTrail(dbTrail);
+        }
+      } catch (e) {
+        console.error('Failed to fetch trail details from backend:', e);
+      }
+    }
+    async function checkBookmark() {
+      try {
+        const profile = await syncUserProfile();
+        if (profile && profile.savedTrails) {
+          setIsBookmarked(profile.savedTrails.includes(id as string));
+        }
+      } catch (err) {
+        console.error('Failed to check bookmark status:', err);
+      }
+    }
+    loadTrailDetails();
+    checkBookmark();
+  }, [id]);
+
+  React.useEffect(() => {
     if (!trail) return;
     async function fetchTrailWeather() {
       try {
@@ -102,6 +174,18 @@ export default function TrailDetailScreen() {
     fetchTrailWeather();
   }, [trail?.id]);
 
+  const handleToggleBookmark = async () => {
+    const previousState = isBookmarked;
+    setIsBookmarked(!previousState);
+    try {
+      const res = await toggleBookmark(id as string);
+      setIsBookmarked(res.isBookmarked);
+    } catch (err) {
+      console.error('Failed to toggle bookmark:', err);
+      setIsBookmarked(previousState);
+    }
+  };
+
   if (!trail) {
     return (
       <ThemedView style={styles.container}>
@@ -111,7 +195,12 @@ export default function TrailDetailScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View 
+      style={[styles.container, { backgroundColor: theme.background }]}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+    >
       {/* Fixed Back Button (Absolute Overlay) */}
       <Pressable 
         style={[styles.backButton, { top: insets.top + 10 }]} 
@@ -120,12 +209,36 @@ export default function TrailDetailScreen() {
         <Ionicons name="arrow-back" size={24} color="#fff" />
       </Pressable>
 
+      {/* Fixed Bookmark Button (Absolute Overlay) */}
+      <Pressable 
+        style={[styles.bookmarkButton, { top: insets.top + 10 }]} 
+        onPress={handleToggleBookmark}
+      >
+        <Ionicons 
+          name={isBookmarked ? "bookmark" : "bookmark-outline"} 
+          size={22} 
+          color={isBookmarked ? theme.accent : "#fff"} 
+        />
+      </Pressable>
+
       {/* Hero Image Section */}
       <View style={styles.heroContainer}>
-        <Image 
-          source={trail.image} 
-          style={styles.heroImage} 
-          contentFit="cover" 
+        <FlatList
+          data={imageUrls}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          keyExtractor={(item, index) => index.toString()}
+          style={styles.heroFlatList}
+          renderItem={({ item }) => (
+            <Image 
+              source={resolveTrailImage(item)} 
+              style={{ width: Dimensions.get('window').width, height: '100%' }} 
+              contentFit="cover" 
+            />
+          )}
         />
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.85)']}
@@ -140,15 +253,30 @@ export default function TrailDetailScreen() {
             <Text style={styles.locationText}>{trail.location}</Text>
           </View>
         </View>
+
+        {/* Pagination Indicator Overlay */}
+        {imageUrls.length > 1 && (
+          <BlurView intensity={60} tint="dark" style={styles.paginationBadge}>
+            <Text style={styles.paginationText}>
+              {activeImageIndex + 1} / {imageUrls.length}
+            </Text>
+          </BlurView>
+        )}
       </View>
 
       {/* Content Sheet */}
       <ScrollView 
+        scrollEnabled={scrollEnabled}
+        pointerEvents="box-none"
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        onScroll={(e) => {
+          setScrollY(e.nativeEvent.contentOffset.y);
+        }}
+        scrollEventThrottle={16}
       >
-        <View style={styles.spacer} />
+        <View pointerEvents="none" style={styles.spacer} />
         
         <View style={styles.contentSheet}>
           <BlurView 
@@ -198,7 +326,7 @@ export default function TrailDetailScreen() {
           {trail.safetyTips && trail.safetyTips.length > 0 && (
             <View style={styles.section}>
               <ThemedText type="subtitle" style={styles.sectionTitle}>Safety & Tips</ThemedText>
-              {trail.safetyTips.map((tip, index) => (
+              {trail.safetyTips.map((tip: string, index: number) => (
                 <View key={index} style={styles.tipRow}>
                   <Ionicons name="checkmark-circle" size={18} color={theme.accent} style={{ marginTop: 2 }} />
                   <ThemedText style={styles.tipText}>{tip}</ThemedText>
@@ -210,7 +338,7 @@ export default function TrailDetailScreen() {
           {/* Map Placeholder */}
           <Pressable onPress={() => router.push(`/map/${trail.id}`)} style={styles.mapSection}>
              <Image 
-               source={trail.image} // Reusing image as placeholder
+               source={resolveTrailImage(trail.image)} 
                style={styles.mapImage}
                blurRadius={15}
              />
@@ -260,6 +388,33 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  heroFlatList: {
+    width: '100%',
+    height: '100%',
+  },
+  heroImageItem: {
+    width: width,
+    height: SCREEN_HEIGHT * 0.6,
+  },
+  paginationBadge: {
+    position: 'absolute',
+    bottom: 80,
+    right: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  paginationText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   imageGradient: {
     position: 'absolute',
     bottom: 0,
@@ -270,6 +425,19 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(20, 20, 20, 0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 99,
+  },
+  bookmarkButton: {
+    position: 'absolute',
+    right: 20,
     width: 44,
     height: 44,
     borderRadius: 22,
