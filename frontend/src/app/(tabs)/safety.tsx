@@ -17,6 +17,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { useTheme } from '@/hooks/use-theme';
+import { sendChatMessage } from '@/services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -84,33 +85,29 @@ export default function TrailAIChatScreen() {
     setInput('');
     setIsTyping(true);
 
-    // Simulate AI response after 1.5 seconds
-    setTimeout(() => {
-      let aiResponseText = '';
-      const query = userMsgText.toLowerCase();
-
-      if (query.includes('weather') || query.includes('rain') || query.includes('forecast')) {
-        aiResponseText = "🌦️ **WEATHER UPDATE**\n\nThe Sabaragamuwa region is currently seeing high afternoon humidity (80%+) and is prone to sudden evening showers, especially around mountainous trails like Hawagala and Wangedigala.\n\n**Safety Tip:** Start your hikes early (by 6:00 AM) and aim to descend by 2:00 PM to avoid heavy afternoon mist and slippery trail descents.";
-      } else if (query.includes('leech') || query.includes('leeches')) {
-        aiResponseText = "🐛 **LEECH PROTECTION PROTOCOL**\n\nHumid jungle trails (like Hirikatuoya or forest reserve paths) are highly active with leeches.\n\n**Action Guide:**\n1. Tuck trousers into long socks.\n2. Apply salt water, soap, or citrus oil onto your shoes.\n3. Avoid stopping in dense, wet undergrowth.";
-      } else if (query.includes('bambarakanda') || query.includes('waterfall') || query.includes('falls')) {
-        aiResponseText = "⚠️ **BAMBARAKANDA FALLS ADVISORY**\n\nAs the tallest waterfall in Sri Lanka, the route to the crest can be slippery and hazardous.\n\n**Key Alerts:**\n- Stream crossings at the top can rise rapidly without warning during rain.\n- Maintain a safe distance from the edge (high winds can be sudden).\n- Do not attempt to swim in deep plunge pools.";
-      } else if (query.includes('gear') || query.includes('pack') || query.includes('checklist')) {
-        aiResponseText = "🎒 **TRAIL AI PACKING ESSENTIALS**\n\nFor hiking in Sabaragamuwa, ensure you pack:\n\n1. **Hydration:** At least 2.5L of water.\n2. **Navigation:** Offline maps (cellular coverage is highly spotty).\n3. **Safety:** Mini first-aid kit, whistle, rain poncho, and headlamp.\n4. **Apparel:** Sturdy grip footwear and anti-leech socks.";
-      } else {
-        aiResponseText = "🌲 **TRAIL AI ASSISTANT**\n\nI'm scanning safety parameters for Sabaragamuwa trails. Most routes are currently open under moderate humidity.\n\nAlways inform someone of your route before you head out, and remember to pack light but carry the essentials. What trail are you exploring today?";
-      }
-
-      const aiMessage: Message = {
-        id: `ai-${Date.now()}`,
-        sender: 'ai',
-        text: aiResponseText,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-
-      setMessages((prev) => [...prev, aiMessage]);
-      setIsTyping(false);
-    }, 1500);
+    // Call Gemini API on backend
+    sendChatMessage(userMsgText, messages)
+      .then(res => {
+        const aiMessage: Message = {
+          id: `ai-${Date.now()}`,
+          sender: 'ai',
+          text: res.reply,
+          timestamp: res.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+        setIsTyping(false);
+      })
+      .catch(err => {
+        console.error('Failed to get safety advice:', err);
+        const errorMessage: Message = {
+          id: `ai-err-${Date.now()}`,
+          sender: 'ai',
+          text: "⚠️ I'm sorry, I'm having trouble connecting to my safety database right now. Please ensure you are online and try again. Always prioritize safety first!",
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+        setIsTyping(false);
+      });
   };
 
   return (
@@ -130,11 +127,10 @@ export default function TrailAIChatScreen() {
         keyboardVerticalOffset={0}
       >
         {/* Fixed Top Title Bar (styled inside KeyboardAvoidingView to start at the status bar top) */}
-        <View style={[styles.topBar, { paddingTop: insets.top }]}>
-          <BlurView intensity={70} tint="dark" style={StyleSheet.absoluteFill} />
+        <View style={[styles.topBar, { paddingTop: insets.top, height: 64 + insets.top }]}>
           <View style={styles.topBarContent}>
             <View style={styles.aiBadge}>
-              <Ionicons name="sparkles" size={16} color={theme.accent} />
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color={theme.accent} />
             </View>
             <View>
               <Text style={styles.assistantTitle}>Trail AI Safety</Text>
@@ -149,6 +145,7 @@ export default function TrailAIChatScreen() {
           data={messages}
           keyExtractor={(item) => item.id}
           style={styles.messagesList}
+          contentContainerStyle={[styles.flatListContent, { paddingTop: insets.top + 75 }]}
           renderItem={({ item }) => {
             const isUser = item.sender === 'user';
             return (
@@ -189,7 +186,6 @@ export default function TrailAIChatScreen() {
               </View>
             );
           }}
-          contentContainerStyle={styles.flatListContent}
           ListFooterComponent={
             isTyping ? (
               <View style={[styles.messageRow, styles.messageRowAI, { marginTop: 8 }]}>
@@ -255,11 +251,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topBar: {
-    height: 64,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     borderBottomWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
     justifyContent: 'center',
     zIndex: 10,
+    backgroundColor: '#0F0F15',
   },
   topBarContent: {
     flexDirection: 'row',

@@ -9,11 +9,14 @@ import {
   Text, 
   FlatList, 
   Pressable,
-  Dimensions
+  Dimensions,
+  Animated
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import * as SecureStore from 'expo-secure-store';
 
 import { GlassCard } from '@/components/GlassCard';
 import { ThemedText } from '@/components/themed-text';
@@ -21,6 +24,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { TRAILS } from '@/utils/trailData';
+import { fetchTrails, resolveTrailImage } from '@/services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -113,11 +117,81 @@ export default function HomeScreen() {
   const theme = useTheme();
   const router = useRouter();
 
-  const hiddenGems = TRAILS.filter(t => t.hiddenGem);
-  const popularTrails = TRAILS.filter(t => !t.hiddenGem);
+  const [allTrails, setAllTrails] = React.useState<any[]>(TRAILS);
+  const [hiddenGems, setHiddenGems] = React.useState<any[]>(TRAILS.filter(t => t.hiddenGem));
+  const [popularTrails, setPopularTrails] = React.useState<any[]>(TRAILS.filter(t => !t.hiddenGem));
 
   const [weather, setWeather] = React.useState<WeatherData | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
+  
+  // State for dynamic user info
+  const [userName, setUserName] = React.useState('Explorer');
+  const [userEmail, setUserEmail] = React.useState('');
+
+  // State and animation for Sidebar Menu
+  const [isMenuVisible, setIsMenuVisible] = React.useState(false);
+  const slideAnim = React.useRef(new Animated.Value(width)).current;
+
+  React.useEffect(() => {
+    async function loadUser() {
+      try {
+        const storedName = await SecureStore.getItemAsync('user_name');
+        const storedEmail = await SecureStore.getItemAsync('user_email');
+        if (storedName) setUserName(storedName);
+        if (storedEmail) setUserEmail(storedEmail);
+      } catch (e) {
+        console.error('Failed to load user info:', e);
+      }
+    }
+    async function loadTrails() {
+      try {
+        const dbTrails = await fetchTrails();
+        if (dbTrails && dbTrails.length > 0) {
+          setAllTrails(dbTrails);
+          setHiddenGems(dbTrails.filter((t: any) => t.hiddenGem));
+          setPopularTrails(dbTrails.filter((t: any) => !t.hiddenGem));
+        }
+      } catch (e) {
+        console.error('Failed to fetch trails from backend, using fallbacks:', e);
+      }
+    }
+    loadUser();
+    loadTrails();
+  }, []);
+
+  const openMenu = () => {
+    setIsMenuVisible(true);
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeMenu = () => {
+    Animated.timing(slideAnim, {
+      toValue: width,
+      duration: 250,
+      useNativeDriver: true,
+    }).start((result) => {
+      if (result.finished) {
+        setIsMenuVisible(false);
+      }
+    });
+  };
+
+  const handleLogout = async () => {
+    try {
+      await SecureStore.deleteItemAsync('auth_code');
+      await SecureStore.deleteItemAsync('access_token');
+      await SecureStore.deleteItemAsync('user_name');
+      await SecureStore.deleteItemAsync('user_email');
+      closeMenu();
+      router.replace('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   React.useEffect(() => {
     async function fetchWeather() {
@@ -154,7 +228,7 @@ export default function HomeScreen() {
 
   const weatherDisplay = weather || defaultWeather;
 
-  const filteredTrails = TRAILS.filter(trail => {
+  const filteredTrails = allTrails.filter(trail => {
     const query = searchQuery.toLowerCase().trim();
     return (
       trail.name.toLowerCase().includes(query) ||
@@ -163,22 +237,26 @@ export default function HomeScreen() {
   });
 
   return (
-    <ScrollView 
-      style={[styles.container, { backgroundColor: theme.background }]}
-      contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: 120 }}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTextContainer}>
-          <Text style={styles.headerBranding}>SabraTrails</Text>
-          <Text style={styles.welcomeText}>Welcome, Explorer</Text>
+    <View style={{ flex: 1 }}>
+      <ScrollView 
+        style={[styles.container, { backgroundColor: theme.background }]}
+        contentContainerStyle={{ paddingTop: insets.top + 10, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerTopRow}>
+            <View style={styles.brandingRow}>
+              <FontAwesome5 name="hiking" size={22} color="#FF8C32" />
+              <Text style={styles.headerBranding}>SabraTrails</Text>
+            </View>
+            <Pressable style={styles.menuButton} onPress={openMenu}>
+              <Ionicons name="menu-outline" size={28} color={theme.text} />
+            </Pressable>
+          </View>
+          <Text style={styles.welcomeText}>Welcome, {userName.trim().split(/\s+/).pop() || 'Explorer'}</Text>
         </View>
-        <Pressable style={styles.menuButton}>
-          <Ionicons name="menu-outline" size={28} color={theme.text} />
-        </Pressable>
-      </View>
 
       {/* Search Bar */}
       <GlassCard intensity={15} style={styles.searchContainer} contentStyle={styles.searchContent}>
@@ -242,12 +320,13 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.horizontalList}
+            style={styles.horizontalListFlatList}
             renderItem={({ item }) => (
               <Pressable 
                 onPress={() => router.push(`/trail/${item.id}`)}
                 style={styles.gemCard}
               >
-                <Image source={item.image} style={styles.gemImage} />
+                <Image source={resolveTrailImage(item.image)} style={styles.gemImage} />
                 <View style={styles.difficultyBadge}>
                   <Text style={[styles.difficultyText, { color: getDifficultyColor(item.difficulty) }]}>
                     {item.difficulty}
@@ -265,7 +344,7 @@ export default function HomeScreen() {
           />
 
           {/* Popular Trails Section */}
-          <View style={styles.sectionHeader}>
+          <View style={[styles.sectionHeader, { marginTop: 16, paddingTop: 0 }]}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>Popular Trails</ThemedText>
             <Pressable onPress={() => router.push('/category/popular')}>
               <ThemedText style={styles.seeAllText}>See All</ThemedText>
@@ -278,12 +357,13 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.horizontalList}
+            style={styles.horizontalListFlatList}
             renderItem={({ item }) => (
               <Pressable 
                 onPress={() => router.push(`/trail/${item.id}`)}
                 style={styles.popularCarouselCard}
               >
-                <Image source={item.image} style={styles.popularImage} />
+                <Image source={resolveTrailImage(item.image)} style={styles.popularImage} />
                 <View style={styles.difficultyBadge}>
                   <Text style={[styles.difficultyText, { color: getDifficultyColor(item.difficulty) }]}>
                     {item.difficulty}
@@ -318,7 +398,7 @@ export default function HomeScreen() {
                   onPress={() => router.push(`/trail/${item.id}`)}
                   style={styles.searchCard}
                 >
-                  <Image source={item.image} style={styles.cardImage} />
+                  <Image source={resolveTrailImage(item.image)} style={styles.cardImage} />
                   
                   <View style={styles.difficultyBadge}>
                     <Text style={[styles.difficultyText, { color: getDifficultyColor(item.difficulty) }]}>
@@ -344,7 +424,80 @@ export default function HomeScreen() {
           )}
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+
+      {/* Sidebar Drawer Menu */}
+      {isMenuVisible && (
+        <View style={StyleSheet.absoluteFill}>
+          <Pressable style={styles.modalBackdrop} onPress={closeMenu} />
+          <Animated.View style={[styles.drawerContainer, { transform: [{ translateX: slideAnim }] }]}>
+            <BlurView intensity={95} tint="dark" style={styles.drawerBlur}>
+              <View style={[styles.drawerHeader, { paddingTop: insets.top + 20 }]}>
+                <View style={styles.drawerBrandingRow}>
+                  <FontAwesome5 name="hiking" size={20} color="#FF8C32" />
+                  <Text style={styles.drawerTitleBranding}>SABRATRAILS</Text>
+                </View>
+                <Pressable onPress={closeMenu} style={styles.drawerCloseButton}>
+                  <Ionicons name="close" size={24} color="#FFF" />
+                </Pressable>
+              </View>
+              
+              <View style={styles.drawerUserInfo}>
+                <View style={styles.avatarCircle}>
+                  <Text style={styles.avatarText}>{userName.charAt(0).toUpperCase()}</Text>
+                </View>
+                <Text style={styles.drawerUserName}>{userName}</Text>
+                {userEmail ? <Text style={styles.drawerUserEmail}>{userEmail}</Text> : null}
+              </View>
+
+              <View style={styles.drawerDivider} />
+
+              <View style={[styles.drawerItems, { paddingBottom: insets.bottom + 95 }]}>
+                <Pressable 
+                  style={styles.drawerItem} 
+                  onPress={() => {
+                    closeMenu();
+                    router.push('/profile');
+                  }}
+                >
+                  <Ionicons name="person-outline" size={22} color="#FFF" style={styles.drawerItemIcon} />
+                  <Text style={styles.drawerItemText}>Profile</Text>
+                </Pressable>
+                <View style={styles.itemSeparator} />
+
+                <Pressable 
+                  style={styles.drawerItem} 
+                  onPress={() => {
+                    closeMenu();
+                    router.push('/saved-trails');
+                  }}
+                >
+                  <Ionicons name="bookmark-outline" size={22} color="#FFF" style={styles.drawerItemIcon} />
+                  <Text style={styles.drawerItemText}>Saved Trails</Text>
+                </Pressable>
+                <View style={styles.itemSeparator} />
+
+                <Pressable 
+                  style={styles.drawerItem} 
+                  onPress={() => {
+                    closeMenu();
+                    router.push('/settings');
+                  }}
+                >
+                  <Ionicons name="settings-outline" size={22} color="#FFF" style={styles.drawerItemIcon} />
+                  <Text style={styles.drawerItemText}>Settings</Text>
+                </Pressable>
+
+                <Pressable style={[styles.drawerItem, styles.logoutItem]} onPress={handleLogout}>
+                  <Ionicons name="log-out-outline" size={22} color="#FF3B30" style={styles.drawerItemIcon} />
+                  <Text style={[styles.drawerItemText, styles.logoutText]}>Logout</Text>
+                </Pressable>
+              </View>
+            </BlurView>
+          </Animated.View>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -353,14 +506,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    paddingHorizontal: 20,
+    marginBottom: 25,
+    flexDirection: 'column',
+  },
+  headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 25,
+    width: '100%',
+    marginBottom: 0,
   },
-  headerTextContainer: {
-    flexDirection: 'column',
+  brandingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 0,
   },
   headerBranding: {
     fontSize: 12,
@@ -368,12 +529,13 @@ const styles = StyleSheet.create({
     color: '#FF8C32',
     letterSpacing: 2.5,
     textTransform: 'uppercase',
-    marginBottom: 4,
   },
   welcomeText: {
-    fontSize: 25,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '600',
     color: '#FFFFFF',
+    marginTop: 0,
+    lineHeight: 26,
   },
   menuButton: {
     width: 44,
@@ -382,6 +544,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: -4,
+    alignSelf: 'center',
+    flexShrink: 0,
   },
   searchContainer: {
     marginHorizontal: 20,
@@ -391,6 +555,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
     borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   searchContent: {
     padding: 0,
@@ -492,11 +661,16 @@ const styles = StyleSheet.create({
   horizontalList: {
     paddingLeft: 20,
     paddingRight: 40,
-    marginBottom: 30,
+    marginBottom: 0,
+    paddingBottom: 0,
+  },
+  horizontalListFlatList: {
+    marginBottom: 0,
+    paddingBottom: 0,
   },
   gemCard: {
     width: width * 0.65,
-    height: 220,
+    height: 230,
     marginRight: 15,
     borderRadius: 25,
     backgroundColor: '#1E1E1E',
@@ -507,7 +681,9 @@ const styles = StyleSheet.create({
     height: '65%',
   },
   gemInfo: {
-    padding: 12,
+    paddingHorizontal: 14,
+    paddingTop: 16,
+    paddingBottom: 14,
     gap: 4,
   },
   gemName: {
@@ -633,6 +809,138 @@ const styles = StyleSheet.create({
     color: '#A0A0A0',
     textAlign: 'center',
     paddingHorizontal: 20,
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)', // Softer, premium backdrop
+  },
+  drawerContainer: {
+    width: '75%',
+    height: '100%',
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: -10, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 20,
+    borderLeftWidth: 1.5,
+    borderLeftColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  drawerBlur: {
+    flex: 1,
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(15, 15, 20, 0.75)', // Luxury glass tint
+  },
+  drawerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 35,
+  },
+  drawerBrandingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  drawerTitleBranding: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FF8C32',
+    letterSpacing: 2.5,
+    textTransform: 'uppercase',
+  },
+  drawerCloseButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  drawerUserInfo: {
+    alignItems: 'center',
+    marginBottom: 35,
+    paddingVertical: 10,
+  },
+  avatarCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 140, 50, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    shadowColor: '#FF8C32',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  avatarText: {
+    color: '#FFF',
+    fontSize: 32,
+    fontWeight: '800',
+  },
+  drawerUserName: {
+    color: '#FFF',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  drawerUserEmail: {
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontSize: 13,
+    fontWeight: '400',
+    textAlign: 'center',
+  },
+  drawerDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    marginBottom: 25,
+  },
+  drawerItems: {
+    flex: 1,
+  },
+  drawerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 8,
+  },
+  drawerItemIcon: {
+    marginRight: 16,
+  },
+  drawerItemText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  itemSeparator: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.07)',
+    marginHorizontal: 8,
+  },
+  logoutItem: {
+    marginTop: 'auto',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    paddingVertical: 18,
+    paddingHorizontal: 8,
+  },
+  logoutText: {
+    color: '#FF3B30',
+    fontWeight: '700',
   },
 });
 

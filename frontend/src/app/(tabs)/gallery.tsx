@@ -24,6 +24,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { TRAILS } from '@/utils/trailData';
+import * as SecureStore from 'expo-secure-store';
+import { fetchGalleryPhotos, uploadGalleryPhoto, deleteGalleryPhoto, resolveTrailImage } from '@/services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -95,7 +97,16 @@ export default function CommunityLensScreen() {
   const theme = useTheme();
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState('All Shots');
-  const [photos, setPhotos] = useState(PHOTO_FEED);
+  const [photos, setPhotos] = useState<any[]>(PHOTO_FEED);
+  const [currentUserEmail, setCurrentUserEmail] = useState('');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3000);
+  };
 
   // Modal States
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -103,6 +114,35 @@ export default function CommunityLensScreen() {
   const [trailName, setTrailName] = useState('');
   const [location, setLocation] = useState('');
   const [selectedCustomImage, setSelectedCustomImage] = useState<any>(null);
+
+  React.useEffect(() => {
+    async function loadUser() {
+      const email = await SecureStore.getItemAsync('user_email');
+      if (email) setCurrentUserEmail(email);
+    }
+    async function loadGallery() {
+      try {
+        const dbPhotos = await fetchGalleryPhotos();
+        if (dbPhotos && dbPhotos.length > 0) {
+          const backendPhotos = dbPhotos.map((p: any) => ({
+            id: p._id,
+            source: p.image,
+            height: Math.floor(Math.random() * 100) + 170,
+            title: p.title,
+            location: p.location,
+            category: p.category,
+            userEmail: p.userEmail,
+            userName: p.userName
+          }));
+          setPhotos([...backendPhotos, ...PHOTO_FEED]);
+        }
+      } catch (err) {
+        console.error('Failed to load gallery photos:', err);
+      }
+    }
+    loadUser();
+    loadGallery();
+  }, []);
 
   const filteredPhotos = photos.filter(photo => {
     if (activeCategory === 'All Shots') return true;
@@ -142,33 +182,51 @@ export default function CommunityLensScreen() {
     }
   };
 
-  const handleSharePost = () => {
+  const handleSharePost = async () => {
     if (!selectedImageUri) return;
     if (!trailName.trim() || !location.trim()) {
       Alert.alert("Required Fields", "Please fill in both the Trail Name and Location.");
       return;
     }
 
-    // Set category to current category filter, fallback to Peaks & Viewpoints if All Shots
     const finalCategory = activeCategory === 'All Shots' ? 'Peaks & Viewpoints' : activeCategory;
 
-    const newPhoto = {
-      id: `custom_${Date.now()}`,
-      source: selectedImageUri,
-      height: Math.floor(Math.random() * 100) + 170,
-      title: trailName.trim(),
-      location: location.trim(),
-      category: finalCategory,
-    };
+    const formData = new FormData();
+    formData.append('title', trailName.trim());
+    formData.append('location', location.trim());
+    formData.append('category', finalCategory);
+    
+    const uriParts = selectedImageUri.split('.');
+    const fileType = uriParts[uriParts.length - 1];
+    
+    formData.append('image', {
+      uri: selectedImageUri,
+      name: `photo_${Date.now()}.${fileType}`,
+      type: `image/${fileType === 'jpg' ? 'jpeg' : fileType}`
+    } as any);
 
-    setPhotos(prevPhotos => [newPhoto, ...prevPhotos]);
-    setIsModalVisible(false);
-    setSelectedImageUri(null);
+    try {
+      const uploadedPhoto = await uploadGalleryPhoto(formData);
+      
+      const newPhoto = {
+        id: uploadedPhoto._id,
+        source: uploadedPhoto.image,
+        height: Math.floor(Math.random() * 100) + 170,
+        title: uploadedPhoto.title,
+        location: uploadedPhoto.location,
+        category: uploadedPhoto.category,
+        userEmail: uploadedPhoto.userEmail,
+        userName: uploadedPhoto.userName
+      };
 
-    Alert.alert(
-      "Success",
-      "Photo selected and ready to be shared with the community!"
-    );
+      setPhotos(prevPhotos => [newPhoto, ...prevPhotos]);
+      setIsModalVisible(false);
+      setSelectedImageUri(null);
+      showToast("Photo shared!");
+    } catch (err: any) {
+      console.error("Upload failed: ", err);
+      Alert.alert("Upload Failed", err.message || "Could not upload your photo.");
+    }
   };
 
   const handleCancelPost = () => {
@@ -185,9 +243,20 @@ export default function CommunityLensScreen() {
         { 
           text: "Delete", 
           style: "destructive", 
-          onPress: () => {
-            setPhotos(prevPhotos => prevPhotos.filter(photo => photo.id !== id));
-            setSelectedCustomImage(null);
+          onPress: async () => {
+            try {
+              if (id.startsWith('custom_') || !isNaN(Number(id))) {
+                setPhotos(prevPhotos => prevPhotos.filter(photo => photo.id !== id));
+              } else {
+                await deleteGalleryPhoto(id);
+                setPhotos(prevPhotos => prevPhotos.filter(photo => photo.id !== id));
+              }
+              setSelectedCustomImage(null);
+              showToast("Photo deleted");
+            } catch (err: any) {
+              console.error('Delete failed:', err);
+              Alert.alert('Delete Failed', err.message || 'Could not delete your photo.');
+            }
           } 
         }
       ]
@@ -255,7 +324,8 @@ export default function CommunityLensScreen() {
               <Pressable 
                 key={img.id} 
                 onPress={() => {
-                  if (img.id.startsWith('custom_')) {
+                  const isStatic = TRAILS.some(t => t.id === img.id);
+                  if (!isStatic) {
                     setSelectedCustomImage(img);
                   } else {
                     router.push(`/trail/${img.id}`);
@@ -263,7 +333,7 @@ export default function CommunityLensScreen() {
                 }}
                 style={[styles.imageWrapper, { height: img.height }]}
               >
-                <Image source={img.source} style={styles.image} contentFit="cover" />
+                <Image source={resolveTrailImage(img.source)} style={styles.image} contentFit="cover" />
                 <View style={styles.imageOverlay}>
                   <LinearGradient
                     colors={['transparent', 'rgba(0,0,0,0.85)']}
@@ -286,7 +356,8 @@ export default function CommunityLensScreen() {
               <Pressable 
                 key={img.id} 
                 onPress={() => {
-                  if (img.id.startsWith('custom_')) {
+                  const isStatic = TRAILS.some(t => t.id === img.id);
+                  if (!isStatic) {
                     setSelectedCustomImage(img);
                   } else {
                     router.push(`/trail/${img.id}`);
@@ -294,7 +365,7 @@ export default function CommunityLensScreen() {
                 }}
                 style={[styles.imageWrapper, { height: img.height }]}
               >
-                <Image source={img.source} style={styles.image} contentFit="cover" />
+                <Image source={resolveTrailImage(img.source)} style={styles.image} contentFit="cover" />
                 <View style={styles.imageOverlay}>
                   <LinearGradient
                     colors={['transparent', 'rgba(0,0,0,0.85)']}
@@ -418,19 +489,21 @@ export default function CommunityLensScreen() {
               <Ionicons name="close" size={28} color="#fff" />
             </Pressable>
             
-            <Pressable 
-              style={styles.viewerHeaderButton} 
-              onPress={() => selectedCustomImage && handleDeleteCustomImage(selectedCustomImage.id)}
-            >
-              <Ionicons name="trash-outline" size={24} color="#F87171" />
-            </Pressable>
+            {selectedCustomImage && (selectedCustomImage.id?.startsWith('custom_') || selectedCustomImage.userEmail === currentUserEmail) && (
+              <Pressable 
+                style={styles.viewerHeaderButton} 
+                onPress={() => handleDeleteCustomImage(selectedCustomImage.id)}
+              >
+                <Ionicons name="trash-outline" size={24} color="#F87171" />
+              </Pressable>
+            )}
           </View>
 
           {/* Full Screen Image */}
           {selectedCustomImage && (
             <View style={styles.viewerImageWrapper}>
               <Image 
-                source={selectedCustomImage.source} 
+                source={resolveTrailImage(selectedCustomImage.source)} 
                 style={styles.viewerImage} 
                 contentFit="contain"
               />
@@ -445,6 +518,15 @@ export default function CommunityLensScreen() {
           )}
         </View>
       </Modal>
+
+      {toastMessage && (
+        <View style={[styles.toastContainer, { top: insets.top + 70 }]}>
+          <BlurView intensity={90} tint="dark" style={styles.toastBlur}>
+            <Ionicons name="checkmark-circle" size={18} color="#FF8C32" />
+            <Text style={styles.toastText}>{toastMessage}</Text>
+          </BlurView>
+        </View>
+      )}
     </View>
   );
 }
@@ -711,5 +793,32 @@ const styles = StyleSheet.create({
     color: '#ccc',
     fontSize: 13,
     fontWeight: '500',
+  },
+  toastContainer: {
+    position: 'absolute',
+    alignSelf: 'center',
+    zIndex: 9999,
+  },
+  toastBlur: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 140, 50, 0.3)',
+    backgroundColor: 'rgba(20, 20, 20, 0.85)',
+    gap: 8,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  toastText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

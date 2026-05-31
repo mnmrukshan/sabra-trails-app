@@ -60,7 +60,7 @@ export default function TabLayout() {
         name="safety"
         options={{
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'sparkles' : 'sparkles-outline'} size={size} color={color} />
+            <Ionicons name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'} size={size} color={color} />
           ),
         }}
       />
