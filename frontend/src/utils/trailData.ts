@@ -29,6 +29,11 @@ export const TRAILS = [
     climate: 'Misty & Windy',
     hiddenGem: true,
     image: require('@/assets/images/bakers bend.jpeg'),
+    images: [
+      require('@/assets/images/bakers bend.jpeg'),
+      require('@/assets/images/bakers_bend_2.jpeg'),
+      require('@/assets/images/bakers_bend_3.jpeg'),
+    ],
     safetyTips: ['Strong winds at the bend.', 'Fog can reduce visibility quickly.'],
   },
   {
@@ -94,6 +99,11 @@ export const TRAILS = [
     climate: 'Tropical & Still',
     hiddenGem: true,
     image: require('@/assets/images/hunugalpokuna.jpeg'),
+    images: [
+      require('@/assets/images/hunugalpokuna.jpeg'),
+      require('@/assets/images/hunugalpokuna_2.jpeg'),
+      require('@/assets/images/hunugalpokuna_3.jpeg'),
+    ],
     safetyTips: ['Water can be deep in areas.', 'Keep the area clean.'],
   },
   {
@@ -161,6 +171,11 @@ export const TRAILS = [
     climate: 'Fresh & Cool',
     hiddenGem: true,
     image:  require('@/assets/images/nonpareil.jpeg'),
+    images: [
+      require('@/assets/images/nonpareil.jpeg'),
+      require('@/assets/images/nonpareil_2.jpeg'),
+      require('@/assets/images/nonpareil_3.jpeg'),
+    ],
     safetyTips: ['Respect the estate workers.', 'Stay on the estate roads.'],
   },
   {
@@ -228,6 +243,11 @@ export const TRAILS = [
     climate: 'Chilly & Windy',
     hiddenGem: false,
     image: require('@/assets/images/lipton.jpeg'),
+    images: [
+      require('@/assets/images/lipton.jpeg'),
+      require('@/assets/images/lipton_2.jpeg'),
+      require('@/assets/images/lipton_3.jpeg'),
+    ],
     safetyTips: ['Visit before 9 AM.', 'Can get very chilly.'],
   },
   {
@@ -294,6 +314,11 @@ export const TRAILS = [
     climate: 'Cool & English',
     hiddenGem: false,
     image: require('@/assets/images/bunglow.jpeg'),
+    images: [
+      require('@/assets/images/bunglow.jpeg'),
+      require('@/assets/images/bunglow_2.jpeg'),
+      require('@/assets/images/bunglow_3.jpeg'),
+    ],
     safetyTips: ['Respect the monastery silence.', 'Check visiting hours.'],
   },
   {
@@ -311,7 +336,7 @@ export const TRAILS = [
   },
   {
     id: 'horton-plains',
-    name: 'Horton Plains National Park',
+    name: 'Horton Plains',
     location: 'Nuwara Eliya',
     difficulty: 'Easy',
     description: "A UNESCO World Heritage site and a plateau of silent beauty. The 9km circular trail takes you through cloud forests and damp grasslands, leading to the famous World's End precipice.",
@@ -320,6 +345,11 @@ export const TRAILS = [
     climate: 'Cold & Damp',
     hiddenGem: false,
     image: require('@/assets/images/horton.jpeg'),
+    images: [
+      require('@/assets/images/horton.jpeg'),
+      require('@/assets/images/horton_2.jpeg'),
+      require('@/assets/images/horton_3.jpeg'),
+    ],
     safetyTips: ['Strict no-plastic policy.', 'Be prepared for rain.'],
   },
   {
@@ -333,6 +363,11 @@ export const TRAILS = [
     climate: 'Misty & Quiet',
     hiddenGem: false,
     image: require('@/assets/images/ohiya.jpeg'),
+    images: [
+      require('@/assets/images/ohiya.jpeg'),
+      require('@/assets/images/ohiya_2.jpeg'),
+      require('@/assets/images/ohiya_3.jpeg'),
+    ],
     safetyTips: ['Railway tracks are in use.', 'Watch for the train.'],
   },
   {
@@ -346,6 +381,11 @@ export const TRAILS = [
     climate: 'Freezing & Misty',
     hiddenGem: false,
     image: require('@/assets/images/world.jpeg'),
+    images: [
+      require('@/assets/images/world.jpeg'),
+      require('@/assets/images/world_2.jpeg'),
+      require('@/assets/images/world_3.jpeg'),
+    ],
     safetyTips: ['Do not lean over the edge.', 'Early morning is best.'],
   },
   {
@@ -414,6 +454,11 @@ export const TRAILS = [
     climate: 'Cool & Misty',
     hiddenGem: false,
     image: require('@/assets/images/gregory.jpeg'),
+    images: [
+      require('@/assets/images/gregory.jpeg'),
+      require('@/assets/images/gregory_2.jpeg'),
+      require('@/assets/images/gregory_3.jpeg'),
+    ],
     coordinates: { lat: 6.9634, lon: 80.7818 },
     safetyTips: ['Stay on designated walkways.', 'Boating activities require life jackets.'],
   },

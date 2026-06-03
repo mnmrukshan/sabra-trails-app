@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { StyleSheet, View, ScrollView, Pressable, Dimensions, Text, FlatList } from 'react-native';
+import { StyleSheet, View, ScrollView, Pressable, Dimensions, Text, FlatList, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,22 +25,13 @@ export default function TrailDetailScreen() {
   const [trail, setTrail] = React.useState<any>(TRAILS.find((t) => t.id === id));
   const [isBookmarked, setIsBookmarked] = React.useState(false);
   const [activeImageIndex, setActiveImageIndex] = React.useState(0);
-  const [scrollY, setScrollY] = React.useState(0);
-  const [scrollEnabled, setScrollEnabled] = React.useState(true);
+  const scrollY = React.useRef(new Animated.Value(0)).current;
 
-  const handleTouchStart = (e: any) => {
-    const pageY = e.nativeEvent.pageY;
-    const contentSheetTop = (SCREEN_HEIGHT * 0.5 + 24) - scrollY;
-    if (pageY < contentSheetTop) {
-      setScrollEnabled(false);
-    } else {
-      setScrollEnabled(true);
-    }
-  };
-
-  const handleTouchEnd = () => {
-    setScrollEnabled(true);
-  };
+  const translateY = scrollY.interpolate({
+    inputRange: [0, SCREEN_HEIGHT * 0.6],
+    outputRange: [0, SCREEN_HEIGHT * 0.6],
+    extrapolate: 'clamp',
+  });
 
   const imageUrls = React.useMemo(() => {
     if (!trail) return [];
@@ -195,12 +186,7 @@ export default function TrailDetailScreen() {
   }
 
   return (
-    <View 
-      style={[styles.container, { backgroundColor: theme.background }]}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
-    >
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Fixed Back Button (Absolute Overlay) */}
       <Pressable 
         style={[styles.backButton, { top: insets.top + 10 }]} 
@@ -221,63 +207,67 @@ export default function TrailDetailScreen() {
         />
       </Pressable>
 
-      {/* Hero Image Section */}
-      <View style={styles.heroContainer}>
-        <FlatList
-          data={imageUrls}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-          keyExtractor={(item, index) => index.toString()}
-          style={styles.heroFlatList}
-          renderItem={({ item }) => (
-            <Image 
-              source={resolveTrailImage(item)} 
-              style={{ width: Dimensions.get('window').width, height: '100%' }} 
-              contentFit="cover" 
-            />
-          )}
-        />
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.85)']}
-          style={styles.imageGradient}
-        />
-        
-        {/* Floating Title Info */}
-        <View style={styles.headerInfo}>
-          <ThemedText type="title" style={styles.trailName}>{trail.name}</ThemedText>
-          <View style={styles.locationBadge}>
-            <Ionicons name="location" size={14} color={theme.accent} />
-            <Text style={styles.locationText}>{trail.location}</Text>
-          </View>
-        </View>
-
-        {/* Pagination Indicator Overlay */}
-        {imageUrls.length > 1 && (
-          <BlurView intensity={60} tint="dark" style={styles.paginationBadge}>
-            <Text style={styles.paginationText}>
-              {activeImageIndex + 1} / {imageUrls.length}
-            </Text>
-          </BlurView>
-        )}
-      </View>
-
-      {/* Content Sheet */}
-      <ScrollView 
-        scrollEnabled={scrollEnabled}
-        pointerEvents="box-none"
+      {/* Main Scrollable Content */}
+      <Animated.ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        onScroll={(e) => {
-          setScrollY(e.nativeEvent.contentOffset.y);
-        }}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
         scrollEventThrottle={16}
       >
-        <View pointerEvents="none" style={styles.spacer} />
-        
+        {/* Parallax Image Carousel Container */}
+        <Animated.View style={[styles.heroContainer, { transform: [{ translateY }] }]}>
+          <FlatList
+            data={imageUrls}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            keyExtractor={(item, index) => index.toString()}
+            style={styles.heroFlatList}
+            renderItem={({ item }) => (
+              <Image 
+                source={resolveTrailImage(item)} 
+                style={{ width: Dimensions.get('window').width, height: '100%' }} 
+                contentFit="cover" 
+              />
+            )}
+          />
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.85)']}
+            style={styles.imageGradient}
+          />
+          
+          {/* Floating Title Info */}
+          <View style={styles.headerInfo}>
+            <ThemedText 
+              type="title" 
+              style={styles.trailName}
+              adjustsFontSizeToFit={true}
+              numberOfLines={2}
+            >
+              {trail.name}
+            </ThemedText>
+            <View style={styles.locationBadge}>
+              <Ionicons name="location" size={14} color={theme.accent} />
+              <Text style={styles.locationText}>{trail.location}</Text>
+            </View>
+          </View>
+
+          {/* Pagination Indicator Overlay */}
+          {imageUrls.length > 1 && (
+            <BlurView intensity={60} tint="dark" style={styles.paginationBadge}>
+              <Text style={styles.paginationText}>
+                {activeImageIndex + 1} / {imageUrls.length}
+              </Text>
+            </BlurView>
+          )}
+        </Animated.View>
+
         <View style={styles.contentSheet}>
           <BlurView 
             intensity={80} 
@@ -348,7 +338,7 @@ export default function TrailDetailScreen() {
              </View>
           </Pressable>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Sticky Bottom Action Bar (Fixed Floating View) */}
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 20) }]}>
@@ -380,7 +370,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   heroContainer: {
-    position: 'absolute',
+    position: 'relative',
     width: '100%',
     height: SCREEN_HEIGHT * 0.6,
   },
@@ -458,6 +448,7 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: '800',
     color: '#fff',
+    lineHeight: 40,
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: -1, height: 1 },
     textShadowRadius: 10,
@@ -488,6 +479,7 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT * 0.5 + 24,
   },
   contentSheet: {
+    marginTop: -(SCREEN_HEIGHT * 0.1 - 24), // Matches the original overlap height
     marginHorizontal: 0,
     borderTopLeftRadius: 35,
     borderTopRightRadius: 35,

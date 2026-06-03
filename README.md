@@ -1,56 +1,105 @@
-# Welcome to your Expo app 👋
+# 🌿 SabraTrails — Eco-Tourism & Hiker Safety Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+> A full-stack cross-platform mobile application designed to solve local eco-tourism challenges by mapping hidden trails, providing real-time weather alerts, and ensuring hiker safety.
 
-## Get started
+---
 
-1. Install dependencies
+## 🎥 App Demo Video
 
-   ```bash
-   npm install
-   ```
+Click on the image below to watch the full mobile app demonstration on YouTube:
 
-2. Start the app
+[![SabraTrails App Demo](https://img.youtube.com/vi/T5FSGj4aVlQ/maxresdefault.jpg)](https://youtu.be/T5FSGj4aVlQ)
 
-   ```bash
-   npx expo start
-   ```
+*(Or [click here](https://youtu.be/T5FSGj4aVlQ) to watch the video directly)*
 
-In the output, you'll find options to open the app in a
+---
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 📖 The Inspiration
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+As a Software Engineering undergraduate at Sabaragamuwa University of Sri Lanka, I spent much of my time exploring the breathtaking natural landscapes surrounding our campus. I realized that many incredible, hidden trails remain unknown to regular travelers, and hikers frequently face major frustration and safety risks due to unpredictable local weather patterns.
 
-## Get a fresh project
+To solve this real-world problem, I built **SabraTrails**. While the current database is localized within a 70km radius around my university, the architecture is designed to scale and cover all of Sri Lanka.
 
-When you're ready, run:
+---
 
-```bash
-npm run reset-project
+## 🚀 Key Features
+
+* 🔐 **Secure Authentication (WSO2):** Identity management and secure user login powered by **WSO2 Asgardeo** using the OIDC/PKCE Flow.
+* 🤖 **Context-Aware AI Chatbot:** An integrated safety assistant powered by **Google Gemini AI** to provide personalized hiking recommendations, gear checklists, and safety guidance.
+* 🗺️ **Interactive Maps & GPS:** Integrated Google Maps routing for live directions and accurate distance calculations to trailheads.
+* 🌤️ **Live Weather Alerts:** Real-time local climate data fetching via the Open-Meteo API to prevent hikers from getting caught in dangerous weather.
+* 📸 **Community Lens:** A shared cloud gallery (Cloudinary) allowing hikers to upload, categorize, and share nature photography.
+* 💾 **Local Storage & Session Management:** Secure persistence of user profiles and saved trails using React Native local storage.
+
+---
+
+## 💻 Technology Stack
+
+### Frontend (Mobile App)
+* **Framework:** React Native, Expo
+* **Language:** TypeScript
+* **Styling:** Custom StyleSheet (Glassmorphism & Parallax UI)
+
+### Backend (API & Server)
+* **Runtime:** Node.js
+* **Framework:** Express.js
+* **Database:** MongoDB Atlas (NoSQL)
+
+### Integrations & Security
+* **Identity Provider:** WSO2 Asgardeo (OAuth 2.0 / OIDC)
+* **AI Engine:** Google Gemini API
+* **Media Storage:** Cloudinary
+* **Location/Weather:** Google Maps SDK, Open-Meteo API
+
+---
+
+## 📂 Project Structure
+
+```text
+├── backend/        # Node.js + Express API server, routes, and DB models
+└── frontend/       # React Native + Expo Mobile Application
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-### Other setup steps
+## ⚙️ Getting Started (Local Development)
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+If you wish to run this project locally, follow these steps:
 
-## Learn more
+### Prerequisites
+* Node.js installed
+* Expo CLI installed (`npm install -g expo-cli`)
+* MongoDB cluster URL
+* WSO2 Asgardeo Tenant Setup
 
-To learn more about developing your project with Expo, look at the following resources:
+### 1. Clone the repository
+```bash
+git clone https://github.com/mnmrukshan/sabra-trails-app.git
+cd sabra-trails-app
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### 2. Environment Variables
+Create a `.env` file in the `backend` directory and add the following:
+```env
+PORT=5000
+MONGO_URI=your_mongodb_connection_string
+GEMINI_API_KEY=your_gemini_api_key
+WSO2_CLIENT_ID=your_wso2_asgardeo_client_id
+```
 
-## Join the community
+### 3. Setup the Backend
+```bash
+cd backend
+npm install
+npm run dev
+```
 
-Join our community of developers creating universal apps.
+### 4. Setup the Frontend
+```bash
+cd ../frontend
+npm install
+npx expo start
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+*Designed and Developed by M.N.M Rukshan - Sabaragamuwa University of Sri Lanka.*
