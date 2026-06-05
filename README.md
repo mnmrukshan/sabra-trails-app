@@ -18,7 +18,7 @@ Click on the image below to watch the full mobile app demonstration on YouTube:
 
 As a Software Engineering undergraduate at Sabaragamuwa University of Sri Lanka, I spent much of my time exploring the breathtaking natural landscapes surrounding our campus. I realized that many incredible, hidden trails remain unknown to regular travelers, and hikers frequently face major frustration and safety risks due to unpredictable local weather patterns.
 
-To solve this real-world problem, I built **SabraTrails**. While the current database is localized within a 70km radius around my university, the architecture is designed to scale and cover all of Sri Lanka.
+To solve this real-world problem, I built SabraTrails. While the current database focuses on mapping the breathtaking trails across Sri Lanka's Central Highlands and surrounding eco-tourism hotspots, the architecture is designed to seamlessly scale and cover the entire island.
 
 ---
 
